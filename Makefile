@@ -24,6 +24,6 @@ deploy:
 	gcloud functions deploy ${target} --region=${region} --runtime=${runtime} --trigger-http --allow-unauthenticated
 
 ## Run function_framework local
-local: 
+run-local: 
 	env/bin/functions_framework --target=${target}
 
