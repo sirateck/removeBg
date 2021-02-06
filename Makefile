@@ -4,7 +4,10 @@ NC = \033[0m
 
 region?=europe-west1
 runtime?=python38
-target?=removeBg
+GOOGLE_FUNCTION_TARGET?=removeBg
+packageName?=removebg
+imageName?=${projectId}/${packageName}
+runImage?=gcr.io/${projectId}/python3-dev-run-image
 
 default:help;
 ## Display this help dialog
@@ -19,11 +22,37 @@ help:
 		} \
 	} \
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)
+
+BUILD_FLAGS = --builder=gcr.io/buildpacks/builder:v1 \
+	--run-image=${runImage} \
+	--env=GOOGLE_FUNCTION_SIGNATURE_TYPE=http \
+	--env=GOOGLE_FUNCTION_TARGET=${GOOGLE_FUNCTION_TARGET} \
+	--env=GOOGLE_RUNTIME=python
+PUBLISH_FLAGS = ${BUILD_FLAGS} --publish gcr.io/${imageName}
+
+## Build on container with buildpacks
+build:
+	docker build -t ${runImage} -f run.Dockerfile .
+	pack build ${imageName} ${BUILD_FLAGS}
+
+publish-run-image:
+	docker build -t ${runImage} -f run.Dockerfile .
+	docker push ${runImage}
+
+## Build and publish
+publish:
+	# docker build -t ${runImage} -f run.Dockerfile .
+	pack build ${PUBLISH_FLAGS}
+
 ## Deploy function
 deploy:
-	gcloud functions deploy ${target} --region=${region} --runtime=${runtime} --trigger-http --allow-unauthenticated
+	gcloud run deploy ${packageName} --image=gcr.io/${imageName} --platform managed --region=${region} --allow-unauthenticated --memory 512M
+	# gcloud functions deploy ${GOOGLE_FUNCTION_TARGET} --region=${region} --runtime=${runtime} --trigger-http --allow-unauthenticated
 
 ## Run function_framework local
-run-local: 
-	env/bin/functions_framework --target=${target}
+run-local:
+	env/bin/functions_framework --target=${GOOGLE_FUNCTION_TARGET}
+## Run function in docker container
+run-local-docker: build
+	docker run --rm -p 8080:8080 ${imageName}
 
