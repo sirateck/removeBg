@@ -35,8 +35,10 @@ build:
 	docker build -t ${runImage} -f run.Dockerfile .
 	pack build ${imageName} ${BUILD_FLAGS}
 
+## Publish image used to run gcloud run container
 publish-run-image:
-	docker build -t ${runImage} -f run.Dockerfile .
+	# DOCKER_BUILDKIT used to use .dockerignore by Dockerfile name
+	DOCKER_BUILDKIT=1 docker build -t ${runImage} -f run.Dockerfile .
 	docker push ${runImage}
 
 ## Build and publish
